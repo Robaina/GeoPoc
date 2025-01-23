@@ -77,7 +77,7 @@ RUN python setup.py install
 
 # Set executable permission for mkdssp
 WORKDIR /app/GeoPoc
-RUN chmod +x /app/GeoPoc/script/feature_extraction/mkdssp
+RUN chmod +x /app/GeoPoc/feature_extraction/mkdssp
 
 # Add environment variable for CUDA device (can be overridden at runtime)
 ENV CUDA_VISIBLE_DEVICES=0
