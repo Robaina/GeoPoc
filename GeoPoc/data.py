@@ -17,6 +17,7 @@ class ProteinGraphDataset(data.Dataset):
 
         self.dataset_path = args.dataset_path
         self.feature_path = args.feature_path
+        self.task_path = args.task
 
         self.radius = radius
         self.letter_to_num = {'C': 4, 'D': 3, 'S': 15, 'Q': 5, 'K': 11, 'I': 9,
@@ -33,7 +34,8 @@ class ProteinGraphDataset(data.Dataset):
         with torch.no_grad():
             X = torch.load(self.feature_path + "pdb/" + name + ".tensor")
 
-            esm_feat = torch.load(self.feature_path + "embedding/" + name + ".tensor")
+            # esm_feat = torch.load(self.feature_path + "embedding/" + name + ".tensor")
+            esm_feat = torch.load(self.feature_path + f"embedding/{self.task_path}/" + name + ".tensor")
             
             dssp_feat = torch.load(self.feature_path + 'DSSP/' + name + ".tensor")
             pre_computed_node_feat = torch.cat([esm_feat, dssp_feat], dim=-1)

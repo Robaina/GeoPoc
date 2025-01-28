@@ -1,22 +1,27 @@
-FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu20.04
+# ------------------------------------------------------------------------------
+# 1) Use the PyTorch Docker image with Python 3.8
+# ------------------------------------------------------------------------------
+FROM pytorch/pytorch:1.12.0-cuda11.3-cudnn8-devel
 
-# Avoid interactive dialog during package installation
+# Avoid interactive dialogs
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies including those needed for pyenv
-RUN apt-get update && apt-get install -y \
+# ------------------------------------------------------------------------------
+# 2) Install any system packages you need
+# ------------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     wget \
     unzip \
     build-essential \
     libssl-dev \
     zlib1g-dev \
-    libbz2-dev \
     libreadline-dev \
     libsqlite3-dev \
+    libbz2-dev \
     curl \
     libncursesw5-dev \
     xz-utils \
@@ -25,63 +30,62 @@ RUN apt-get update && apt-get install -y \
     libxmlsec1-dev \
     libffi-dev \
     liblzma-dev \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pyenv
-RUN curl https://pyenv.run | bash
+# ------------------------------------------------------------------------------
+# 3) Install Rust (avoid using 'source' which /bin/sh doesn't recognize)
+# ------------------------------------------------------------------------------
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup default stable
 
-# Add pyenv to PATH
-ENV HOME /root
-ENV PYENV_ROOT $HOME/.pyenv
-ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
-
-# Install Python 3.8.18
-RUN pyenv install 3.8.18 && \
-    pyenv global 3.8.18 && \
-    eval "$(pyenv init -)"
-
-# Verify Python version
-RUN python --version
-
-# Update pip and setuptools
+# ------------------------------------------------------------------------------
+# 4) Upgrade pip, setuptools, wheel
+# ------------------------------------------------------------------------------
 RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA support
-RUN pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
-
-# Install Python dependencies with compatible versions
+# ------------------------------------------------------------------------------
+# 5) Install PyTorch Geometric libs for PyTorch 1.12.0 + cu113
+# ------------------------------------------------------------------------------
 RUN pip install --no-cache-dir \
-    numpy==1.23.5 \
-    pandas==1.5.3 \
-    biopython==1.81 \
-    sentencepiece==0.1.99 \
-    transformers==4.30.1 \
-    modelcif==0.7
+    torch-scatter \
+    torch-sparse \
+    torch-cluster \
+    torch-spline-conv \
+    pyg-lib \
+    torch-geometric \
+    -f https://data.pyg.org/whl/torch-1.12.0+cu113.html
 
-# Install PyG dependencies separately with specific versions
-RUN pip install torch-scatter==2.1.0+pt112cu113 -f https://data.pyg.org/whl/torch-1.12.0+cu113.html && \
-    pip install torch-sparse==0.6.15+pt112cu113 -f https://data.pyg.org/whl/torch-1.12.0+cu113.html && \
-    pip install torch-cluster==1.6.0+pt112cu113 -f https://data.pyg.org/whl/torch-1.12.0+cu113.html && \
-    pip install torch-geometric==2.3.0
+# ------------------------------------------------------------------------------
+# 6) Install your other Python deps
+# ------------------------------------------------------------------------------
+RUN pip install --no-cache-dir \
+    numpy \
+    pandas \
+    biopython \
+    sentencepiece \
+    transformers \
+    modelcif \
+    "fair-esm[esmfold]" \
+    'dllogger @ git+https://github.com/NVIDIA/dllogger.git'
 
-# Install ESMFold and dllogger
-RUN pip install --no-cache-dir "fair-esm[esmfold]" && \
-    pip install --no-cache-dir 'dllogger @ git+https://github.com/NVIDIA/dllogger.git'
-
-# Copy GeoPoc repository including openfold
+# ------------------------------------------------------------------------------
+# 7) Copy your code, install OpenFold, etc.
+# ------------------------------------------------------------------------------
 COPY GeoPoc /app/GeoPoc
 
-# Install OpenFold from local copy
-WORKDIR /app/GeoPoc/openfold/openfold-main
+WORKDIR /app/GeoPoc/openfold
 RUN python setup.py install
 
-# Set executable permission for mkdssp
 WORKDIR /app/GeoPoc
-RUN chmod +x /app/GeoPoc/feature_extraction/mkdssp
+RUN chmod +x feature_extraction/mkdssp
 
-# Add environment variable for CUDA device (can be overridden at runtime)
+# ------------------------------------------------------------------------------
+# 8) Environment variables & entrypoint
+# ------------------------------------------------------------------------------
 ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTHONUNBUFFERED=1
 
-# Command to run predictions (can be overridden at runtime)
 ENTRYPOINT ["python", "predict.py"]
 CMD ["-h"]

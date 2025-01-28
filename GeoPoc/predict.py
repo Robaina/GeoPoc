@@ -6,6 +6,11 @@ from data import *
 from model import *
 from feature_extraction.process_structure import get_pdb_xyz,process_dssp,match_dssp
 
+import warnings
+from Bio import BiopythonDeprecationWarning
+
+warnings.filterwarnings("ignore", category=BiopythonDeprecationWarning)
+
 FOLDS=5
 CLASS_DICT={
     "pH":["0-5","5-9","9-14"],
