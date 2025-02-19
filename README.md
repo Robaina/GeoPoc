@@ -2,6 +2,37 @@
 
 * Created a Dockerfile to run GeoPoc as a docker container
 
+__NOTES__:
+
+On ESM-2 embeddings and normalization:
+
+1. Initial Observation:
+- The same protein (A0A2P5KBM8) had different normalized embeddings across temp/pH/salt conditions
+- The raw ESM-2 embedding was identical for all tasks
+- Only the normalized versions differed
+
+2. Normalization Process:
+```python
+normalized_embedding = (raw_esm - MIN) / (MAX - MIN)
+```
+- Each task uses its own MIN/MAX values from ESM_Min_Max.pkl
+- temp_Min/Max for temperature
+- pH_Min/Max for pH
+- salt_Min/Max for salt
+
+3. Design Choice Rationale:
+- Task-specific normalization helps optimize for each property prediction
+- Different properties (temp/pH/salt) have different natural ranges and distributions
+- Acts like different "lenses" to view the same protein data
+- Could help balance the learning process for each property
+- Might improve model's ability to capture property-specific relationships
+
+4. Code Structure:
+- Raw embeddings stored as: `{embedding_path}{ID}.pt`
+- Normalized versions stored as: `{embedding_path}{task}/{ID}.tensor`
+- Uses layer 36 representations from ESM-2
+- Saves as float32 tensor format
+
 # Intoduction
 Here, we proposed an up-to-date dataset consisting of tree tasks (temperature, pH, salt concentration) and a protein optimal condition predictor GeoPoc. GeoPoc is a geometry-aware network for simultaneously predicting protein optimal temperature, pH, and salt concentration. GeoPoc leverages AlphaFold-predicted protein structures and sequence embeddings extracted from a pre-trained language model and further employs a geometric graph transformer network to capture the structure and sequence features. GeoPoc is easy to install and run, and is also fast and accurate (surpassing state-of-the-art methods).
 ![](fig/model.png)
