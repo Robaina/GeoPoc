@@ -82,10 +82,16 @@ WORKDIR /app/GeoPoc
 RUN chmod +x feature_extraction/mkdssp
 
 # ------------------------------------------------------------------------------
-# 8) Environment variables & entrypoint
+# 8) Add the new entrypoint script and make it executable
+# ------------------------------------------------------------------------------
+COPY entrypoint.py /app/entrypoint.py
+RUN chmod +x /app/entrypoint.py
+
+# ------------------------------------------------------------------------------
+# 9) Environment variables & entrypoint
 # ------------------------------------------------------------------------------
 ENV CUDA_VISIBLE_DEVICES=0
 ENV PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["python", "predict.py"]
-CMD ["-h"]
+ENTRYPOINT ["/app/entrypoint.py"]
+CMD ["--help"]
